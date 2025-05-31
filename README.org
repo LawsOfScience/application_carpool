@@ -1,0 +1,4 @@
+* application_carpool
+A program for keeping all your applications alive in the background, similar to PM2.
+
+** Usage (WIP)
