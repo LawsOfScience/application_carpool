@@ -1,6 +1,8 @@
 import org.bread_experts_group.Flag
 import org.bread_experts_group.readArgs
 import org.bread_experts_group.logging.ColoredLogger
+import org.bread_experts_group.stringToBoolean
+import java.lang.management.ManagementFactory
 import java.nio.file.Path
 import java.util.logging.Level
 import kotlin.io.path.exists
@@ -8,10 +10,30 @@ import kotlin.io.path.notExists
 import kotlin.system.exitProcess
 
 val FLAGS = listOf(
-    Flag("log_level", "The logging level to use.", default = Level.WARNING),
-    Flag("start", "Whether to start the supervisor daemon.", default = false),
-    Flag("stop", "Whether to stop the supervisor daemon.", default = false),
-    Flag("socket", "The location of the socket used to talk with the supervisor daemon.", default = Path.of("./carpool.sock")),
+    Flag(
+        "log_level",
+        "The logging level to use.",
+        default = Level.WARNING,
+        conv = Level::parse
+    ),
+    Flag(
+        "start",
+        "Whether to start the supervisor daemon.",
+        default = false,
+        conv = ::stringToBoolean
+    ),
+    Flag(
+        "stop",
+        "Whether to stop the supervisor daemon.",
+        default = false,
+        conv = ::stringToBoolean
+    ),
+    Flag(
+        "socket",
+        "The location of the socket used to talk with the supervisor daemon.",
+        default = Path.of("./carpool.sock"),
+        conv = Path::of
+    ),
 )
 val LOGGER = ColoredLogger.newLogger("ApplicationCarpool_CLI")
 
@@ -39,7 +61,8 @@ fun spawnSupervisor(socketPath: Path) {
         exitProcess(1)
     }
 
-    // TODO: start supervisor daemon
+    val classPath = ManagementFactory.getRuntimeMXBean().classPath
+    val supervisor = Runtime.getRuntime().exec(arrayOf("java", "-cp", classPath, "CarpoolSupervisorMainKt"))
 
-    LOGGER.info("Supervisor daemon started.")
+    LOGGER.info("Supervisor daemon started - PID ${supervisor.pid()}.")
 }
