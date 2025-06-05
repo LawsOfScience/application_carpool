@@ -2,6 +2,8 @@ package org.bread_experts_group.application_carpool.client
 
 import org.bread_experts_group.application_carpool.rmi.Supervisor
 import org.bread_experts_group.Flag
+import org.bread_experts_group.MultipleArgs
+import org.bread_experts_group.SingleArgs
 import org.bread_experts_group.application_carpool.rmi.StatusResult
 import org.bread_experts_group.readArgs
 import org.bread_experts_group.logging.ColoredLogger
@@ -39,31 +41,49 @@ val FLAGS = listOf(
     )
 )
 private val LOGGER = ColoredLogger.newLogger("ApplicationCarpool_CLI")
+val COMMANDS = listOf("stop", "status")
 
 fun main(args: Array<String>) {
     LOGGER.info("- Reading arguments")
 
-    val (singleArgs, _) = readArgs(args, FLAGS, "Application Carpool", "Test")
+    val (singleArgs, multipleArgs) = readArgs(args, FLAGS, "Application Carpool", "Test")
 
     LOGGER.level = singleArgs["log_level"] as Level
-    val start = singleArgs["start"] as Boolean
 
-    if (start)
+    val start = singleArgs["start"] as Boolean
+    if (start) {
+        if (singleArgs["stop"] as Boolean) {
+            LOGGER.severe("Please only use EITHER -start or -stop.")
+            exitProcess(1)
+        }
         spawnSupervisor(singleArgs["log_level"] as Level)
-    else if (checkSupervisorStatus() == null) {
+    } else if (checkSupervisorStatus() == null) {
         LOGGER.severe("The supervisor daemon does not appear to be running. Please start it with -start.")
         exitProcess(1)
     }
 
-    if (singleArgs["status"] as Boolean) {
-        LOGGER.fine(checkSupervisorStatus().toString())
-    } else if (singleArgs["stop"] as Boolean) {
-        LOGGER.info("Exiting the supervisor daemon.")
-        try {
-            val registry = LocateRegistry.getRegistry(9085)
-            val stub = registry.lookup("CarpoolSupervisor") as Supervisor
-            stub.stop()
-        } catch (_: UnmarshalException) {}  // expected to happen, ignore
+    val registry = LocateRegistry.getRegistry(9085)
+    val supervisor = registry.lookup("CarpoolSupervisor") as Supervisor
+    handleCommands(singleArgs.filterKeys { COMMANDS.contains(it) }, multipleArgs, supervisor)
+}
+
+private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, supervisor: Supervisor) {
+    for (arg in singleArgs) {
+        when (arg.key) {
+            "status" -> if (singleArgs["status"] as Boolean) {
+                val status = checkSupervisorStatus()
+                if (status == null) {
+                    println("Supervisor online: false")
+                } else {
+                    println("Supervisor online: ${status.status}\nPID: ${status.pid}")
+                }
+            }
+            "stop" -> if (singleArgs["stop"] as Boolean) {
+                try {
+                    supervisor.stop()
+                } catch (_: UnmarshalException) {}  // expected, so ignore
+            }
+        }
     }
 }
 
