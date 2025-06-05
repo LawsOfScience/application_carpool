@@ -1,12 +1,12 @@
+package org.bread_experts_group.application_carpool
+
 import org.bread_experts_group.Flag
 import org.bread_experts_group.readArgs
 import org.bread_experts_group.logging.ColoredLogger
 import org.bread_experts_group.stringToBoolean
 import java.lang.management.ManagementFactory
-import java.nio.file.Path
+import java.rmi.registry.LocateRegistry
 import java.util.logging.Level
-import kotlin.io.path.exists
-import kotlin.io.path.notExists
 import kotlin.system.exitProcess
 
 val FLAGS = listOf(
@@ -29,13 +29,13 @@ val FLAGS = listOf(
         conv = ::stringToBoolean
     ),
     Flag(
-        "socket",
-        "The location of the socket used to talk with the supervisor daemon.",
-        default = Path.of("./carpool.sock"),
-        conv = Path::of
-    ),
+        "status",
+        "Command to get the supervisor's status",
+        default = false,
+        conv = ::stringToBoolean
+    )
 )
-val LOGGER = ColoredLogger.newLogger("ApplicationCarpool_CLI")
+private val LOGGER = ColoredLogger.newLogger("ApplicationCarpool_CLI")
 
 fun main(args: Array<String>) {
     LOGGER.info("- Reading arguments")
@@ -44,25 +44,45 @@ fun main(args: Array<String>) {
 
     LOGGER.level = singleArgs["log_level"] as Level
     val start = singleArgs["start"] as Boolean
-    val socket = singleArgs["socket"] as Path
 
     if (start)
-        spawnSupervisor(socket)
-    else if (socket.notExists()) {
+        spawnSupervisor(singleArgs["log_level"] as Level)
+    else if (!checkSupervisorStatus()) {
         LOGGER.severe("The supervisor daemon does not appear to be running. Please start it with -start.")
         exitProcess(1)
     }
+
+    if (singleArgs["status"] as Boolean) {
+        LOGGER.fine(checkSupervisorStatus().toString())
+    }
 }
 
-fun spawnSupervisor(socketPath: Path) {
+private fun spawnSupervisor(logLevel: Level) {
     LOGGER.info("Attempting to start supervisor daemon...")
-    if (socketPath.exists()) {
+    if (checkSupervisorStatus()) {
         LOGGER.severe("You have asked to start the supervisor daemon, but it appears to already be running.")
         exitProcess(1)
     }
 
     val classPath = ManagementFactory.getRuntimeMXBean().classPath
-    val supervisor = Runtime.getRuntime().exec(arrayOf("java", "-cp", classPath, "CarpoolSupervisorMainKt"))
+    val supervisor = Runtime.getRuntime()
+        .exec(arrayOf(
+            "java",
+            "-cp", classPath,
+            "org.bread_experts_group.application_carpool.CarpoolSupervisorMainKt",
+            logLevel.toString()
+        ))
 
     LOGGER.info("Supervisor daemon started - PID ${supervisor.pid()}.")
+}
+
+private fun checkSupervisorStatus(): Boolean {
+    try {
+        val registry = LocateRegistry.getRegistry(9085)
+        val stub = registry.lookup("CarpoolSupervisor") as Supervisor
+        return stub.status()
+    } catch (e: Exception) {
+        LOGGER.log(Level.FINE, e) { "Encountered an exception while checking the supervisor's status -- is the supervisor alive?" }
+        return false
+    }
 }
