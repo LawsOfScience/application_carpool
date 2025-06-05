@@ -18,6 +18,14 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
+tasks.jar.configure {
+    manifest {
+        attributes(mapOf("Main-Class" to "org.bread_experts_group.application_carpool.client.CarpoolCLIMainKt"))
+    }
+    configurations["compileClasspath"].forEach { file: File ->
+        from(zipTree(file.absoluteFile))
+    }
+}
 
 kotlin {
     jvmToolchain(21)
