@@ -8,6 +8,7 @@ import org.bread_experts_group.application_carpool.rmi.StatusResult
 import org.bread_experts_group.readArgs
 import org.bread_experts_group.logging.ColoredLogger
 import org.bread_experts_group.stringToBoolean
+import org.bread_experts_group.stringToInt
 import java.lang.management.ManagementFactory
 import java.rmi.UnmarshalException
 import java.rmi.registry.LocateRegistry
@@ -20,6 +21,12 @@ val FLAGS = listOf(
         "The logging level to use.",
         default = Level.INFO,
         conv = Level::parse
+    ),
+    Flag(
+        "port",
+        "The port to use for the RMI registry.",
+        default = 1099,
+        conv = ::stringToInt
     ),
     Flag(
         "start",
@@ -51,18 +58,19 @@ fun main(args: Array<String>) {
 
     val start = singleArgs["start"] as Boolean
     val stop = singleArgs["stop"] as Boolean
+    val port = singleArgs["port"] as Int
     if (start) {
         if (singleArgs["stop"] as Boolean) {
             LOGGER.severe("Please only use EITHER -start or -stop.")
             exitProcess(1)
         }
-        spawnSupervisor(singleArgs["log_level"] as Level)
-    } else if (checkSupervisorStatus() == null) {
+        spawnSupervisor(singleArgs["log_level"] as Level, port)
+    } else if (checkSupervisorStatus(port) == null) {
         LOGGER.severe("The supervisor daemon does not appear to be running. Please start it with -start.")
         exitProcess(1)
     }
 
-    val registry = LocateRegistry.getRegistry(9085)
+    val registry = LocateRegistry.getRegistry(port)
     val supervisor = registry.lookup("CarpoolSupervisor") as Supervisor
     if (stop)
         try {
@@ -77,23 +85,24 @@ fun main(args: Array<String>) {
 }
 
 private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, supervisor: Supervisor) {
-    for (arg in singleArgs) {
+    for (arg in singleArgs)
         when (arg.key) {
             "status" -> if (singleArgs["status"] as Boolean) {
-                val status = checkSupervisorStatus()
-                if (status == null) {
-                    println("Supervisor online: false")
-                } else {
-                    println("Supervisor online: ${status.status}\nPID: ${status.pid}")
+                val status = try {
+                    supervisor.status()
+                } catch (e: Exception) {
+                    LOGGER.info("There was an exception getting the supervisor's status -- is it online?")
+                    LOGGER.log(Level.FINE, e) { "The produced exception was" }
+                    continue
                 }
+                LOGGER.info(status.toString())
             }
         }
-    }
 }
 
-private fun spawnSupervisor(logLevel: Level) {
+private fun spawnSupervisor(logLevel: Level, port: Int) {
     LOGGER.info("Attempting to start supervisor daemon...")
-    val supervisorStatus = checkSupervisorStatus()
+    val supervisorStatus = checkSupervisorStatus(port)
     if (supervisorStatus != null) {
         LOGGER.severe("You have asked to start the supervisor daemon, but it appears to already be running (PID ${supervisorStatus.pid}).")
         exitProcess(1)
@@ -105,15 +114,16 @@ private fun spawnSupervisor(logLevel: Level) {
             "java",
             "-cp", classPath,
             "org.bread_experts_group.application_carpool.supervisor.CarpoolSupervisorMainKt",
-            logLevel.toString()
+            "$logLevel",
+            "$port"
         ))
 
     LOGGER.info("Supervisor daemon started - PID ${supervisor.pid()}.")
 }
 
-private fun checkSupervisorStatus(): StatusResult? {
+private fun checkSupervisorStatus(port: Int): StatusResult? {
     try {
-        val registry = LocateRegistry.getRegistry(9085)
+        val registry = LocateRegistry.getRegistry(port)
         val stub = registry.lookup("CarpoolSupervisor") as Supervisor
         return stub.status()
     } catch (e: Exception) {
