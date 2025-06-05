@@ -1,5 +1,6 @@
 package org.bread_experts_group.application_carpool
 
+import org.bread_experts_group.application_carpool.rmi.Supervisor
 import org.bread_experts_group.logging.ColoredLogger
 import java.lang.management.ManagementFactory
 import java.rmi.registry.LocateRegistry
@@ -10,12 +11,13 @@ import kotlin.system.exitProcess
 private val LOGGER = ColoredLogger.newLogger("ApplicationCarpool_Supervisor")
 
 fun main(args: Array<String>) {
+    val pid = ManagementFactory.getRuntimeMXBean().pid
     LOGGER.level = Level.parse(args[0])
-    LOGGER.info("Starting supervisor daemon -- PID ${ManagementFactory.getRuntimeMXBean().pid}")
+    LOGGER.info("Starting supervisor daemon -- PID $pid")
 
     // TODO: change .getRegistry() and .createRegistry() to use user-specified port
     var registry = LocateRegistry.getRegistry()
-    val supervisor = CarpoolSupervisor()
+    val supervisor = CarpoolSupervisor(pid)
     val supervisorStub = UnicastRemoteObject.exportObject(supervisor, 0) as Supervisor
 
     try {

@@ -1,6 +1,8 @@
 package org.bread_experts_group.application_carpool
 
+import org.bread_experts_group.application_carpool.rmi.Supervisor
 import org.bread_experts_group.Flag
+import org.bread_experts_group.application_carpool.rmi.StatusResult
 import org.bread_experts_group.readArgs
 import org.bread_experts_group.logging.ColoredLogger
 import org.bread_experts_group.stringToBoolean
@@ -47,7 +49,7 @@ fun main(args: Array<String>) {
 
     if (start)
         spawnSupervisor(singleArgs["log_level"] as Level)
-    else if (!checkSupervisorStatus()) {
+    else if (checkSupervisorStatus() == null) {
         LOGGER.severe("The supervisor daemon does not appear to be running. Please start it with -start.")
         exitProcess(1)
     }
@@ -59,8 +61,9 @@ fun main(args: Array<String>) {
 
 private fun spawnSupervisor(logLevel: Level) {
     LOGGER.info("Attempting to start supervisor daemon...")
-    if (checkSupervisorStatus()) {
-        LOGGER.severe("You have asked to start the supervisor daemon, but it appears to already be running.")
+    val supervisorStatus = checkSupervisorStatus()
+    if (supervisorStatus != null) {
+        LOGGER.severe("You have asked to start the supervisor daemon, but it appears to already be running (PID ${supervisorStatus.pid}).")
         exitProcess(1)
     }
 
@@ -76,13 +79,13 @@ private fun spawnSupervisor(logLevel: Level) {
     LOGGER.info("Supervisor daemon started - PID ${supervisor.pid()}.")
 }
 
-private fun checkSupervisorStatus(): Boolean {
+private fun checkSupervisorStatus(): StatusResult? {
     try {
         val registry = LocateRegistry.getRegistry(9085)
         val stub = registry.lookup("CarpoolSupervisor") as Supervisor
         return stub.status()
     } catch (e: Exception) {
         LOGGER.log(Level.FINE, e) { "Encountered an exception while checking the supervisor's status -- is the supervisor alive?" }
-        return false
+        return null
     }
 }
