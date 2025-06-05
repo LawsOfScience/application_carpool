@@ -7,6 +7,7 @@ import org.bread_experts_group.readArgs
 import org.bread_experts_group.logging.ColoredLogger
 import org.bread_experts_group.stringToBoolean
 import java.lang.management.ManagementFactory
+import java.rmi.UnmarshalException
 import java.rmi.registry.LocateRegistry
 import java.util.logging.Level
 import kotlin.system.exitProcess
@@ -26,7 +27,7 @@ val FLAGS = listOf(
     ),
     Flag(
         "stop",
-        "Whether to stop the supervisor daemon.",
+        "Command to stop the supervisor daemon.",
         default = false,
         conv = ::stringToBoolean
     ),
@@ -56,6 +57,13 @@ fun main(args: Array<String>) {
 
     if (singleArgs["status"] as Boolean) {
         LOGGER.fine(checkSupervisorStatus().toString())
+    } else if (singleArgs["stop"] as Boolean) {
+        LOGGER.info("Exiting the supervisor daemon.")
+        try {
+            val registry = LocateRegistry.getRegistry(9085)
+            val stub = registry.lookup("CarpoolSupervisor") as Supervisor
+            stub.stop()
+        } catch (_: UnmarshalException) {}  // expected to happen, ignore
     }
 }
 

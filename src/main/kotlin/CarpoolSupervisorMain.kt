@@ -17,7 +17,7 @@ fun main(args: Array<String>) {
 
     // TODO: change .getRegistry() and .createRegistry() to use user-specified port
     var registry = LocateRegistry.getRegistry()
-    val supervisor = CarpoolSupervisor(pid)
+    val supervisor = CarpoolSupervisor(pid, LOGGER)
     val supervisorStub = UnicastRemoteObject.exportObject(supervisor, 0) as Supervisor
 
     try {
