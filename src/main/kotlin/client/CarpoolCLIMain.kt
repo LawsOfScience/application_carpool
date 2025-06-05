@@ -18,7 +18,7 @@ val FLAGS = listOf(
     Flag(
         "log_level",
         "The logging level to use.",
-        default = Level.WARNING,
+        default = Level.INFO,
         conv = Level::parse
     ),
     Flag(
@@ -41,7 +41,7 @@ val FLAGS = listOf(
     )
 )
 private val LOGGER = ColoredLogger.newLogger("ApplicationCarpool_CLI")
-val COMMANDS = listOf("stop", "status")
+val COMMANDS = listOf("status")
 
 fun main(args: Array<String>) {
     LOGGER.info("- Reading arguments")
@@ -50,6 +50,7 @@ fun main(args: Array<String>) {
     LOGGER.level = singleArgs["log_level"] as Level
 
     val start = singleArgs["start"] as Boolean
+    val stop = singleArgs["stop"] as Boolean
     if (start) {
         if (singleArgs["stop"] as Boolean) {
             LOGGER.severe("Please only use EITHER -start or -stop.")
@@ -63,6 +64,15 @@ fun main(args: Array<String>) {
 
     val registry = LocateRegistry.getRegistry(9085)
     val supervisor = registry.lookup("CarpoolSupervisor") as Supervisor
+    if (stop)
+        try {
+            supervisor.stop()
+        } catch (_: UnmarshalException) {  // expected, so ignore
+        } finally {
+            LOGGER.info("Supervisor daemon stopped")
+            exitProcess(0)
+        }
+
     handleCommands(singleArgs.filterKeys { COMMANDS.contains(it) }, multipleArgs, supervisor)
 }
 
@@ -76,11 +86,6 @@ private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, s
                 } else {
                     println("Supervisor online: ${status.status}\nPID: ${status.pid}")
                 }
-            }
-            "stop" -> if (singleArgs["stop"] as Boolean) {
-                try {
-                    supervisor.stop()
-                } catch (_: UnmarshalException) {}  // expected, so ignore
             }
         }
     }
