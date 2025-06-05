@@ -1,4 +1,4 @@
-package org.bread_experts_group.application_carpool
+package org.bread_experts_group.application_carpool.supervisor
 
 import org.bread_experts_group.application_carpool.rmi.StatusResult
 import org.bread_experts_group.application_carpool.rmi.Supervisor

@@ -1,4 +1,4 @@
-package org.bread_experts_group.application_carpool
+package org.bread_experts_group.application_carpool.client
 
 import org.bread_experts_group.application_carpool.rmi.Supervisor
 import org.bread_experts_group.Flag
@@ -80,7 +80,7 @@ private fun spawnSupervisor(logLevel: Level) {
         .exec(arrayOf(
             "java",
             "-cp", classPath,
-            "org.bread_experts_group.application_carpool.CarpoolSupervisorMainKt",
+            "org.bread_experts_group.application_carpool.supervisor.CarpoolSupervisorMainKt",
             logLevel.toString()
         ))
 
