@@ -47,7 +47,6 @@ fun main(args: Array<String>) {
     LOGGER.info("- Reading arguments")
 
     val (singleArgs, multipleArgs) = readArgs(args, FLAGS, "Application Carpool", "Test")
-
     LOGGER.level = singleArgs["log_level"] as Level
 
     val start = singleArgs["start"] as Boolean
