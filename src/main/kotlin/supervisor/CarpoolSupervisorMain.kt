@@ -37,8 +37,4 @@ fun main(args: Array<String>) {
     }
 
     LOGGER.info("Supervisor daemon started")
-
-    while (true) {
-        Thread.sleep(1000)
-    }
 }

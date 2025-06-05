@@ -65,6 +65,8 @@ fun main(args: Array<String>) {
             exitProcess(1)
         }
         spawnSupervisor(singleArgs["log_level"] as Level, port)
+        LOGGER.info("Giving the supervisor time to wake up...")
+        Thread.sleep(1000)
     } else if (checkSupervisorStatus(port) == null) {
         LOGGER.severe("The supervisor daemon does not appear to be running. Please start it with -start.")
         exitProcess(1)
@@ -85,6 +87,7 @@ fun main(args: Array<String>) {
 }
 
 private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, supervisor: Supervisor) {
+    // NOTE: possibly unnecessary for singleArgs
     for (arg in singleArgs)
         when (arg.key) {
             "status" -> if (singleArgs["status"] as Boolean) {
