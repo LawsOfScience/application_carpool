@@ -20,7 +20,7 @@ import kotlin.system.exitProcess
 val FLAGS = listOf(
     Flag(
         "log_level",
-        "The logging level to use.",
+        "The logging level to use. If starting the supervisor, this level will be used for it as well.",
         default = Level.INFO,
         conv = Level::parse
     ),
