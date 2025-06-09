@@ -9,6 +9,8 @@ import org.bread_experts_group.readArgs
 import org.bread_experts_group.logging.ColoredLogger
 import org.bread_experts_group.stringToBoolean
 import org.bread_experts_group.stringToInt
+import org.bread_experts_group.stringToLong
+import rmi.ServiceNotFoundException
 import java.lang.management.ManagementFactory
 import java.rmi.UnmarshalException
 import java.rmi.registry.LocateRegistry
@@ -57,10 +59,17 @@ val FLAGS = listOf(
         "Command to start a service to be managed by the supervisor.",
         default = "",
         repeatable = true
+    ),
+    Flag(
+        "remove_service",
+        "Command to remove a service managed by the supervisor.",
+        default = -1,
+        repeatable = true,
+        conv = ::stringToLong
     )
 )
 private val LOGGER = ColoredLogger.newLogger("ApplicationCarpool_CLI")
-val COMMANDS = listOf("status", "list_services")
+val SINGLE_COMMANDS = listOf("status", "list_services")
 
 fun main(args: Array<String>) {
     LOGGER.fine("- Reading arguments")
@@ -95,7 +104,7 @@ fun main(args: Array<String>) {
             exitProcess(0)
         }
 
-    handleCommands(singleArgs.filterKeys { COMMANDS.contains(it) }, multipleArgs, supervisor)
+    handleCommands(singleArgs.filterKeys { SINGLE_COMMANDS.contains(it) }, multipleArgs, supervisor)
 }
 
 private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, supervisor: Supervisor) {
@@ -131,6 +140,18 @@ private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, s
                 val commandString = asString.split(" ").toTypedArray()
                 val servicePid = supervisor.addService(commandString)
                 LOGGER.info("Started service [$asString] -- PID $servicePid")
+            }
+            "remove_service" -> for (service in arg.value) {
+                val asLong = service as Long
+                if (asLong == -1L)
+                    continue
+
+                try {
+                    supervisor.removeService(asLong)
+                    LOGGER.info("Removed service with PID $asLong")
+                } catch (snfe: ServiceNotFoundException) {
+                    LOGGER.log(Level.WARNING, snfe) { "There is no service with PID $asLong" }
+                }
             }
         }
 }
