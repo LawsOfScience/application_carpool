@@ -45,13 +45,25 @@ val FLAGS = listOf(
         "Command to get the supervisor's status",
         default = false,
         conv = ::stringToBoolean
+    ),
+    Flag(
+        "list_services",
+        "Command to list all services managed by the supervisor.",
+        default = false,
+        conv = ::stringToBoolean
+    ),
+    Flag(
+        "add_service",
+        "Command to start a service to be managed by the supervisor.",
+        default = "",
+        repeatable = true
     )
 )
 private val LOGGER = ColoredLogger.newLogger("ApplicationCarpool_CLI")
-val COMMANDS = listOf("status")
+val COMMANDS = listOf("status", "list_services")
 
 fun main(args: Array<String>) {
-    LOGGER.info("- Reading arguments")
+    LOGGER.fine("- Reading arguments")
 
     val (singleArgs, multipleArgs) = readArgs(args, FLAGS, "Application Carpool", "Test")
     LOGGER.level = singleArgs["log_level"] as Level
@@ -99,6 +111,26 @@ private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, s
                     continue
                 }
                 LOGGER.info(status.toString())
+            }
+            "list_services" -> if (singleArgs["list_services"] as Boolean) {
+                val services = supervisor.listServices()
+                println("Currently ${services.size} service(s)\n-------")
+                for (service in services) {
+                    println("${service.commandString}\n    -PID: ${service.pid}\n    -Alive?: ${service.isRunning}")
+                }
+            }
+        }
+
+    for (arg in multipleArgs)
+        when (arg.key) {
+            "add_service" -> for (service in arg.value) {
+                val asString = service as String
+                if (asString == "")
+                    continue
+
+                val commandString = asString.split(" ").toTypedArray()
+                val servicePid = supervisor.addService(commandString)
+                LOGGER.info("Started service [$asString] -- PID $servicePid")
             }
         }
 }
