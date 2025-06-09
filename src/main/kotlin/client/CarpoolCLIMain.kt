@@ -68,7 +68,7 @@ val FLAGS = listOf(
         conv = ::stringToLong
     )
 )
-private val LOGGER = ColoredLogger.newLogger("ApplicationCarpool_CLI")
+private val LOGGER = ColoredLogger.newLogger("Application Carpool CLI")
 val SINGLE_COMMANDS = listOf("status", "list_services")
 
 fun main(args: Array<String>) {

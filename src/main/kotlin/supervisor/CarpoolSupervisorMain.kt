@@ -9,7 +9,7 @@ import java.rmi.server.UnicastRemoteObject
 import java.util.logging.Level
 import kotlin.system.exitProcess
 
-private val LOGGER = ColoredLogger.newLogger("ApplicationCarpool_Supervisor")
+private val LOGGER = ColoredLogger.newLogger("Application Carpool Supervisor")
 
 fun main(args: Array<String>) {
     val pid = ManagementFactory.getRuntimeMXBean().pid
