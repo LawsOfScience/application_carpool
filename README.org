@@ -1,4 +1,40 @@
 * application_carpool
 A program for keeping all your applications alive in the background, similar to PM2.
 
-** Usage (WIP)
+** Requirements
+For building and running, Java 21+ is required. Other than that, you don't need anything else.
+
+** Usage
+This describes the general usage of Carpool.
+For brevity, =jar= will be used instead of =java -jar <jarfile>=
+
+*** Supervisor Daemon Management
+_Starting and stopping_
+#+BEGIN_SRC sh :exports code
+jar -start
+jar -stop
+
+# NOTE: if the -log_level flag is used
+# with -start, the log level will be
+# set for the supervisor daemon as well
+jar -log_level=FINE -start
+#+END_SRC
+
+_Status_
+src_sh[:exports code]{jar -status}
+
+*** Service Management
+*NOTE:* the daemon must be started to use these
+
+_Adding and removing_
+#+BEGIN_SRC sh :exports code
+jar -add_service="./some-executable --args"
+jar -remove_service=<pid>
+#+END_SRC
+
+_Listing_
+src_sh[:exports code]{jar -list_services}
+
+** Building and contributing
+IntelliJ IDEA is recommended, but use what works for you.
+Gradle is used for building -- use the build task to compile and the jar task to make a JAR.
