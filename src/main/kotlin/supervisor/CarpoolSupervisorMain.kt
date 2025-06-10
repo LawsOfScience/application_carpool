@@ -2,11 +2,15 @@ package org.bread_experts_group.application_carpool.supervisor
 
 import org.bread_experts_group.application_carpool.rmi.Supervisor
 import org.bread_experts_group.logging.ColoredLogger
+import java.io.PrintStream
 import java.lang.Integer.parseInt
 import java.lang.management.ManagementFactory
+import java.nio.file.StandardOpenOption
 import java.rmi.registry.LocateRegistry
 import java.rmi.server.UnicastRemoteObject
 import java.util.logging.Level
+import kotlin.io.path.Path
+import kotlin.io.path.outputStream
 import kotlin.system.exitProcess
 
 private val LOGGER = ColoredLogger.newLogger("Application Carpool Supervisor")
@@ -14,6 +18,14 @@ private val LOGGER = ColoredLogger.newLogger("Application Carpool Supervisor")
 fun main(args: Array<String>) {
     val pid = ManagementFactory.getRuntimeMXBean().pid
     val port = parseInt(args[1])
+    val logDir = Path(args[2])
+
+    LOGGER.fine("Port: $port, log dir: $logDir")
+
+    System.setOut(PrintStream(logDir
+        .resolve("supervisor-log.txt")
+        .outputStream(StandardOpenOption.APPEND, StandardOpenOption.WRITE)))
+
     LOGGER.level = Level.parse(args[0])
     LOGGER.info("Starting supervisor daemon -- PID $pid")
 

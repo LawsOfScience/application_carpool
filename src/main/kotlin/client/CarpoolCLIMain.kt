@@ -12,9 +12,16 @@ import org.bread_experts_group.stringToInt
 import org.bread_experts_group.stringToLong
 import rmi.ApplicationNotFoundException
 import java.lang.management.ManagementFactory
+import java.nio.file.Path
 import java.rmi.UnmarshalException
 import java.rmi.registry.LocateRegistry
 import java.util.logging.Level
+import kotlin.io.path.Path
+import kotlin.io.path.absolute
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.createDirectories
+import kotlin.io.path.createFile
+import kotlin.io.path.notExists
 import kotlin.system.exitProcess
 
 val FLAGS = listOf(
@@ -29,6 +36,12 @@ val FLAGS = listOf(
         "The port to use for the RMI registry.",
         default = 1099,
         conv = ::stringToInt
+    ),
+    Flag(
+        "log_directory",
+        "The directory to write logs to.",
+        default = Path("./logs/"),
+        conv = { Path(it) }
     ),
     Flag(
         "start",
@@ -85,12 +98,17 @@ fun main(args: Array<String>) {
     val start = singleArgs["start"] as Boolean
     val stop = singleArgs["stop"] as Boolean
     val port = singleArgs["port"] as Int
+    val logDir = singleArgs["log_directory"] as Path
+
+    if (logDir.notExists())
+        logDir.absolute().createDirectories()
+
     if (start) {
         if (singleArgs["stop"] as Boolean) {
             LOGGER.severe("Please only use EITHER -start or -stop.")
             exitProcess(1)
         }
-        spawnSupervisor(singleArgs["log_level"] as Level, port)
+        spawnSupervisor(singleArgs["log_level"] as Level, port, logDir)
         LOGGER.info("Giving the supervisor time to wake up...")
         Thread.sleep(1000)
     } else if (checkSupervisorStatus(port) == null) {
@@ -166,12 +184,20 @@ private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, s
         }
 }
 
-private fun spawnSupervisor(logLevel: Level, port: Int) {
+private fun spawnSupervisor(logLevel: Level, port: Int, logDir: Path) {
     LOGGER.info("Attempting to start supervisor daemon...")
     val supervisorStatus = checkSupervisorStatus(port)
     if (supervisorStatus != null) {
         LOGGER.severe("You have asked to start the supervisor daemon, but it appears to already be running (PID ${supervisorStatus.pid}).")
         exitProcess(1)
+    }
+
+    try {
+        LOGGER.fine("Setting up the supervisor's log file")
+        logDir.resolve("supervisor-log.txt").createFile()
+    } catch (e: FileAlreadyExistsException) {
+        LOGGER.log(Level.FINE, e) { "Supervisor log file already exists" }
+        logDir.resolve("supervisor-log.txt")
     }
 
     val classPath = ManagementFactory.getRuntimeMXBean().classPath
@@ -181,7 +207,8 @@ private fun spawnSupervisor(logLevel: Level, port: Int) {
             "-cp", classPath,
             "org.bread_experts_group.application_carpool.supervisor.CarpoolSupervisorMainKt",
             "$logLevel",
-            "$port"
+            "$port",
+            logDir.absolutePathString()
         ))
 
     LOGGER.info("Supervisor daemon started - PID ${supervisor.pid()}.")
