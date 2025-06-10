@@ -21,7 +21,9 @@ jar -log_level=FINE -start
 #+END_SRC
 
 _Status_
-src_sh[:exports code]{jar -status}
+#+BEGIN_SRC sh :exports code
+jar -status
+#+END_SRC
 
 *** Service Management
 *NOTE:* the daemon must be started to use these
@@ -33,7 +35,9 @@ jar -remove_service=<pid>
 #+END_SRC
 
 _Listing_
-src_sh[:exports code]{jar -list_services}
+#+BEGIN_SRC sh :exports code
+jar -list_services
+#+END_SRC
 
 ** Building and contributing
 IntelliJ IDEA is recommended, but use what works for you.
