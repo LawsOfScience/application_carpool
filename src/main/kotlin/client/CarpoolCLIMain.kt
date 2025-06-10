@@ -4,7 +4,6 @@ import org.bread_experts_group.application_carpool.rmi.Supervisor
 import org.bread_experts_group.Flag
 import org.bread_experts_group.MultipleArgs
 import org.bread_experts_group.SingleArgs
-import org.bread_experts_group.application_carpool.rmi.StatusResult
 import org.bread_experts_group.readArgs
 import org.bread_experts_group.logging.ColoredLogger
 import org.bread_experts_group.stringToBoolean
@@ -12,16 +11,15 @@ import org.bread_experts_group.stringToInt
 import org.bread_experts_group.stringToLong
 import rmi.ApplicationNotFoundException
 import java.lang.management.ManagementFactory
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.rmi.UnmarshalException
 import java.rmi.registry.LocateRegistry
 import java.util.logging.Level
 import kotlin.io.path.Path
-import kotlin.io.path.absolute
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
 import kotlin.io.path.createFile
-import kotlin.io.path.notExists
 import kotlin.system.exitProcess
 
 val FLAGS = listOf(
@@ -82,11 +80,9 @@ val FLAGS = listOf(
     )
 )
 private val LOGGER = ColoredLogger.newLogger("Application Carpool CLI")
-val SINGLE_COMMANDS = listOf("status", "list_applications")
+val SINGLE_COMMANDS = listOf("list_applications", "status", "stop")
 
 fun main(args: Array<String>) {
-    LOGGER.fine("- Reading arguments")
-
     val (singleArgs, multipleArgs) = readArgs(
         args,
         FLAGS,
@@ -94,31 +90,52 @@ fun main(args: Array<String>) {
         "A program for running your applications in the background."
     )
     LOGGER.level = singleArgs["log_level"] as Level
+    LOGGER.fine("Reading arguments")
 
-    val start = singleArgs["start"] as Boolean
-    val stop = singleArgs["stop"] as Boolean
+    (singleArgs["log_directory"] as Path).createDirectories()
+
+    connectToSupervisor(singleArgs, multipleArgs, false)
+}
+
+private fun connectToSupervisor(singleArgs: SingleArgs, multipleArgs: MultipleArgs, started: Boolean) {
+    LOGGER.fine("Connecting to supervisor (reconnection?: $started)")
+
     val port = singleArgs["port"] as Int
-    val logDir = singleArgs["log_directory"] as Path
+    val trySupervisor: Result<Supervisor> = runCatching {
+        val registry = LocateRegistry.getRegistry(port)
+        registry.lookup("CarpoolSupervisor") as Supervisor
+    }
 
-    if (logDir.notExists())
-        logDir.absolute().createDirectories()
-
-    if (start) {
+    if (singleArgs["start"] as Boolean && !started) {
         if (singleArgs["stop"] as Boolean) {
             LOGGER.severe("Please only use EITHER -start or -stop.")
             exitProcess(1)
         }
-        spawnSupervisor(singleArgs["log_level"] as Level, port, logDir)
+
+        trySupervisor.onSuccess {
+            val supervisorPid = it.status().pid
+            LOGGER.severe("You have asked to start the supervisor daemon, but it appears to already be running (PID $supervisorPid).")
+            exitProcess(1)
+        }
+
+        spawnSupervisor(LOGGER.level, port, singleArgs["log_directory"] as Path)
         LOGGER.info("Giving the supervisor time to wake up...")
-        Thread.sleep(1000)
-    } else if (checkSupervisorStatus(port) == null) {
-        LOGGER.severe("The supervisor daemon does not appear to be running. Please start it with -start.")
-        exitProcess(1)
+        Thread.sleep(500)
+        LOGGER.fine("Attempting to connect to newly-started supervisor")
+        connectToSupervisor(singleArgs, multipleArgs, true)
+        return
     }
 
-    val registry = LocateRegistry.getRegistry(port)
-    val supervisor = registry.lookup("CarpoolSupervisor") as Supervisor
-    if (stop)
+    trySupervisor.onSuccess { supervisor ->
+        handleCommands(singleArgs.filterKeys { SINGLE_COMMANDS.contains(it) }, multipleArgs, supervisor)
+    }.onFailure { e ->
+        LOGGER.log(Level.SEVERE, e) { "The supervisor daemon does not appear to be running. Please start it with -start." }
+        exitProcess(1)
+    }
+}
+
+private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, supervisor: Supervisor) {
+    if (singleArgs["stop"] as Boolean)
         try {
             supervisor.stop()
         } catch (_: UnmarshalException) {  // expected, so ignore
@@ -127,11 +144,6 @@ fun main(args: Array<String>) {
             exitProcess(0)
         }
 
-    handleCommands(singleArgs.filterKeys { SINGLE_COMMANDS.contains(it) }, multipleArgs, supervisor)
-}
-
-private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, supervisor: Supervisor) {
-    // NOTE: possibly unnecessary for singleArgs
     for (arg in singleArgs)
         when (arg.key) {
             "status" -> if (singleArgs["status"] as Boolean) {
@@ -186,12 +198,6 @@ private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, s
 
 private fun spawnSupervisor(logLevel: Level, port: Int, logDir: Path) {
     LOGGER.info("Attempting to start supervisor daemon...")
-    val supervisorStatus = checkSupervisorStatus(port)
-    if (supervisorStatus != null) {
-        LOGGER.severe("You have asked to start the supervisor daemon, but it appears to already be running (PID ${supervisorStatus.pid}).")
-        exitProcess(1)
-    }
-
     try {
         LOGGER.fine("Setting up the supervisor's log file")
         logDir.resolve("supervisor-log.txt").createFile()
@@ -212,15 +218,4 @@ private fun spawnSupervisor(logLevel: Level, port: Int, logDir: Path) {
         ))
 
     LOGGER.info("Supervisor daemon started - PID ${supervisor.pid()}.")
-}
-
-private fun checkSupervisorStatus(port: Int): StatusResult? {
-    try {
-        val registry = LocateRegistry.getRegistry(port)
-        val stub = registry.lookup("CarpoolSupervisor") as Supervisor
-        return stub.status()
-    } catch (e: Exception) {
-        LOGGER.log(Level.FINE, e) { "Encountered an exception while checking the supervisor's status -- is the supervisor alive?" }
-        return null
-    }
 }
