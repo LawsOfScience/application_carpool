@@ -1,7 +1,7 @@
 package org.bread_experts_group.application_carpool.rmi
 
-import rmi.ServiceInfo
-import rmi.ServiceNotFoundException
+import rmi.ApplicationInfo
+import rmi.ApplicationNotFoundException
 import java.rmi.Remote
 import java.rmi.RemoteException
 
@@ -13,11 +13,11 @@ interface Supervisor : Remote {
     fun stop()
 
     @Throws(RemoteException::class)
-    fun listServices(): List<ServiceInfo>
+    fun listApplications(): List<ApplicationInfo>
 
     @Throws(RemoteException::class)
-    fun addService(commandArray: Array<String>): Long
+    fun addApplication(commandArray: Array<String>): Long
 
-    @Throws(RemoteException::class, ServiceNotFoundException::class)
-    fun removeService(pid: Long)
+    @Throws(RemoteException::class, ApplicationNotFoundException::class)
+    fun removeApplication(pid: Long)
 }

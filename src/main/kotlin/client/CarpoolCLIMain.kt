@@ -10,7 +10,7 @@ import org.bread_experts_group.logging.ColoredLogger
 import org.bread_experts_group.stringToBoolean
 import org.bread_experts_group.stringToInt
 import org.bread_experts_group.stringToLong
-import rmi.ServiceNotFoundException
+import rmi.ApplicationNotFoundException
 import java.lang.management.ManagementFactory
 import java.rmi.UnmarshalException
 import java.rmi.registry.LocateRegistry
@@ -49,27 +49,27 @@ val FLAGS = listOf(
         conv = ::stringToBoolean
     ),
     Flag(
-        "list_services",
-        "Command to list all services managed by the supervisor.",
+        "list_applications",
+        "Command to list all applications managed by the supervisor.",
         default = false,
         conv = ::stringToBoolean
     ),
     Flag(
-        "add_service",
-        "Command to start a service to be managed by the supervisor.",
+        "add_application",
+        "Command to create a managed application.",
         default = "",
         repeatable = true
     ),
     Flag(
-        "remove_service",
-        "Command to remove a service managed by the supervisor.",
+        "remove_application",
+        "Command to remove a managed application.",
         default = -1,
         repeatable = true,
         conv = ::stringToLong
     )
 )
 private val LOGGER = ColoredLogger.newLogger("Application Carpool CLI")
-val SINGLE_COMMANDS = listOf("status", "list_services")
+val SINGLE_COMMANDS = listOf("status", "list_applications")
 
 fun main(args: Array<String>) {
     LOGGER.fine("- Reading arguments")
@@ -121,37 +121,37 @@ private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, s
                 }
                 LOGGER.info(status.toString())
             }
-            "list_services" -> if (singleArgs["list_services"] as Boolean) {
-                val services = supervisor.listServices()
-                println("Currently ${services.size} service(s)\n-------")
-                for (service in services) {
-                    println("${service.commandString}\n    -PID: ${service.pid}\n    -Alive?: ${service.isRunning}")
+            "list_applications" -> if (singleArgs["list_applications"] as Boolean) {
+                val applications = supervisor.listApplications()
+                println("Currently ${applications.size} application(s)\n-------")
+                for (app in applications) {
+                    println("${app.commandString}\n    -PID: ${app.pid}\n    -Alive?: ${app.isRunning}")
                 }
             }
         }
 
     for (arg in multipleArgs)
         when (arg.key) {
-            "add_service" -> for (service in arg.value) {
-                val asString = service as String
+            "add_application" -> for (app in arg.value) {
+                val asString = app as String
                 if (asString == "")
                     continue
 
                 val commandString = asString.split(" ").toTypedArray()
-                val servicePid = supervisor.addService(commandString)
-                LOGGER.info("Started service [$asString] -- PID $servicePid")
+                val appPid = supervisor.addApplication(commandString)
+                LOGGER.info("Started application [$asString] -- PID $appPid")
             }
-            "remove_service" -> for (service in arg.value) {
-                val asLong = service as Long
+            "remove_application" -> for (app in arg.value) {
+                val asLong = app as Long
                 if (asLong == -1L)
                     continue
 
                 try {
-                    supervisor.removeService(asLong)
-                    LOGGER.info("Removed service with PID $asLong")
-                } catch (snfe: ServiceNotFoundException) {
-                    LOGGER.warning("There is no service with PID $asLong")
-                    LOGGER.log(Level.FINE, snfe) { "Exception info:" }
+                    supervisor.removeApplication(asLong)
+                    LOGGER.info("Removed application with PID $asLong")
+                } catch (anfe: ApplicationNotFoundException) {
+                    LOGGER.warning("There is no application with PID $asLong")
+                    LOGGER.log(Level.FINE, anfe) { "Exception info:" }
                 }
             }
         }
