@@ -150,7 +150,8 @@ private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, s
                     supervisor.removeService(asLong)
                     LOGGER.info("Removed service with PID $asLong")
                 } catch (snfe: ServiceNotFoundException) {
-                    LOGGER.log(Level.WARNING, snfe) { "There is no service with PID $asLong" }
+                    LOGGER.warning("There is no service with PID $asLong")
+                    LOGGER.log(Level.FINE, snfe) { "Exception info:" }
                 }
             }
         }
