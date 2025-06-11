@@ -154,16 +154,15 @@ private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, s
                 }
 
                 if (status.status)
-                    println("Supervisor online, PID ${status.pid}")
+                    LOGGER.info("Supervisor online, PID ${status.pid}")
                 else
-                    println("Supervisor OFFLINE -- please check your configuration")
+                    LOGGER.info("Supervisor OFFLINE -- please check your configuration")
             }
             "list_applications" -> if (singleArgs["list_applications"] as Boolean) {
                 val applications = supervisor.listApplications()
-                println("Currently ${applications.size} application(s)\n-------")
-                for (app in applications) {
-                    println("${app.commandString}\n    -PID: ${app.pid}\n    -Alive?: ${app.isRunning}")
-                }
+                LOGGER.info("Currently ${applications.size} application(s)")
+                for (app in applications)
+                    LOGGER.info("${app.commandString}\n    -PID: ${app.pid}\n    -Alive?: ${app.isRunning}")
             }
         }
 
@@ -171,21 +170,19 @@ private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, s
         when (arg.key) {
             "add_application" -> for (app in arg.value) {
                 val asString = app as String
-                if (asString == "")
-                    continue
+                if (asString.isEmpty()) continue
 
                 val commandString = asString.split(" ").toTypedArray()
                 val appPid = supervisor.addApplication(commandString)
-                println("Started application [$asString] -- PID $appPid")
+                LOGGER.info("Started application [$asString] -- PID $appPid")
             }
             "remove_application" -> for (app in arg.value) {
                 val asLong = app as Long
-                if (asLong == -1L)
-                    continue
+                if (asLong == -1L) continue
 
                 try {
                     supervisor.removeApplication(asLong)
-                    println("Removed application with PID $asLong")
+                    LOGGER.info("Removed application with PID $asLong")
                 } catch (anfe: ApplicationNotFoundException) {
                     LOGGER.warning("There is no application with PID $asLong")
                     LOGGER.log(Level.FINE, anfe) { "Exception info:" }
