@@ -4,20 +4,18 @@ import org.bread_experts_group.application_carpool.rmi.StatusResult
 import org.bread_experts_group.application_carpool.rmi.Supervisor
 import rmi.ApplicationInfo
 import rmi.ApplicationNotFoundException
+import java.rmi.server.UnicastRemoteObject
 import java.util.logging.Logger
 import kotlin.system.exitProcess
 
-class CarpoolSupervisor(val pid: Long, val logger: Logger) : Supervisor {
+class CarpoolSupervisor(val pid: Long, val logger: Logger) : UnicastRemoteObject(0), Supervisor {
     val applications = mutableMapOf<Long, ApplicationEntry>()
 
-    override fun status(): StatusResult {
-        return StatusResult(true, pid)
-    }
+    override fun status() = StatusResult(true, pid)
+
     override fun stop() {
         logger.info("Stop request received, shutting down applications")
-        for (app in applications.values) {
-            app.handle.destroy()
-        }
+        for (app in applications.values) app.handle.destroy()
         logger.info("Applications shut down, exiting supervisor daemon")
         exitProcess(0)
     }
