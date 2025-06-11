@@ -11,7 +11,6 @@ import org.bread_experts_group.stringToInt
 import org.bread_experts_group.stringToLong
 import rmi.ApplicationNotFoundException
 import java.lang.management.ManagementFactory
-import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.rmi.UnmarshalException
 import java.rmi.registry.LocateRegistry
@@ -19,7 +18,6 @@ import java.util.logging.Level
 import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
-import kotlin.io.path.createFile
 import kotlin.system.exitProcess
 
 val FLAGS = listOf(
@@ -198,13 +196,6 @@ private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, s
 
 private fun spawnSupervisor(logLevel: Level, port: Int, logDir: Path) {
     LOGGER.info("Attempting to start supervisor daemon...")
-    try {
-        LOGGER.fine("Setting up the supervisor's log file")
-        logDir.resolve("supervisor-log.txt").createFile()
-    } catch (e: FileAlreadyExistsException) {
-        LOGGER.log(Level.FINE, e) { "Supervisor log file already exists" }
-        logDir.resolve("supervisor-log.txt")
-    }
 
     val classPath = ManagementFactory.getRuntimeMXBean().classPath
     val supervisor = Runtime.getRuntime()

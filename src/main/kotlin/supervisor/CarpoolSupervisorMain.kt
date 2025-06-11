@@ -10,6 +10,8 @@ import java.rmi.registry.LocateRegistry
 import java.rmi.server.UnicastRemoteObject
 import java.util.logging.Level
 import kotlin.io.path.Path
+import kotlin.io.path.createFile
+import kotlin.io.path.notExists
 import kotlin.io.path.outputStream
 import kotlin.system.exitProcess
 
@@ -20,10 +22,11 @@ fun main(args: Array<String>) {
     val port = parseInt(args[1])
     val logDir = Path(args[2])
 
-    LOGGER.fine("Port: $port, log dir: $logDir")
+    val logFile = logDir.resolve("supervisor-log.txt")
+    if (logFile.notExists())
+        logFile.createFile()
 
-    System.setOut(PrintStream(logDir
-        .resolve("supervisor-log.txt")
+    System.setOut(PrintStream(logFile
         .outputStream(StandardOpenOption.APPEND, StandardOpenOption.WRITE)))
 
     LOGGER.level = Level.parse(args[0])
