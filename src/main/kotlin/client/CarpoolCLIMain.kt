@@ -20,7 +20,7 @@ import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
 import kotlin.system.exitProcess
 
-val FLAGS = listOf(
+private val FLAGS = listOf(
     Flag(
         "log_level",
         "The logging level to use. If starting the supervisor, this level will be used for it as well.",
@@ -189,9 +189,9 @@ private fun spawnSupervisor(logLevel: Level, port: Int, logDir: Path) {
             "java",
             "-cp", classPath,
             "org.bread_experts_group.application_carpool.supervisor.CarpoolSupervisorMainKt",
-            "$logLevel",
-            "$port",
-            logDir.absolutePathString()
+            "-log_level=$logLevel",
+            "-port=$port",
+            "-log_dir=${logDir.absolutePathString()}"
         ))
 
     LOGGER.info { "Supervisor daemon started - PID ${supervisor.pid()}." }

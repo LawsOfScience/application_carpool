@@ -1,6 +1,9 @@
 package org.bread_experts_group.application_carpool.supervisor
 
-import java.lang.Integer.parseInt
+import org.bread_experts_group.command_line.Flag
+import org.bread_experts_group.command_line.readArgs
+import org.bread_experts_group.command_line.stringToInt
+import java.nio.file.Path
 import java.rmi.registry.LocateRegistry
 import java.util.logging.FileHandler
 import java.util.logging.Level
@@ -8,15 +11,43 @@ import java.util.logging.Logger
 import kotlin.io.path.Path
 import kotlin.system.exitProcess
 
+private val FLAGS = listOf(
+    Flag(
+        "log_level",
+        "Log level",
+        default = Level.INFO,
+        conv = Level::parse
+    ),
+    Flag(
+        "port",
+        "Port",
+        default = 1099,
+        conv = stringToInt()
+    ),
+    Flag(
+        "log_dir",
+        "Log directory",
+        default = Path("./logs/"),
+        conv = { Path(it) }
+    )
+)
 private val LOGGER = Logger.getLogger("Application Carpool Supervisor")
 
 fun main(args: Array<String>) {
+    val args = readArgs(
+        args,
+        FLAGS,
+        "Application Carpool Supervisor",
+        "Application Carpool Supervisor process"
+    )
     val pid = ProcessHandle.current().pid()
-    val port = parseInt(args[1])
+    val port = args.getRequired<Int>("port")
 
     LOGGER.useParentHandlers = false
-    LOGGER.addHandler(FileHandler(Path(args[2]).resolve("supervisor-log.txt").toString()))
-    LOGGER.level = Level.parse(args[0])
+    LOGGER.addHandler(FileHandler(
+        args.getRequired<Path>("log_dir").resolve("supervisor-log.txt").toString()
+    ))
+    LOGGER.level = args.getRequired<Level>("log_level")
     LOGGER.info { "Starting supervisor daemon -- PID $pid" }
 
     var registry = LocateRegistry.getRegistry(port)
