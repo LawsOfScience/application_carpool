@@ -27,7 +27,7 @@ class CarpoolSupervisor(val pid: Long, val logger: Logger) : UnicastRemoteObject
 
     override fun addApplication(commandArray: Array<String>): Long {
         val commandString = commandArray.joinToString(" ")
-        logger.info("Starting application $commandString")
+        logger.info { "Starting application $commandString" }
 
         val app = Runtime.getRuntime().exec(commandArray)
         applications[app.pid()] = ApplicationEntry(app, commandString)
@@ -36,14 +36,14 @@ class CarpoolSupervisor(val pid: Long, val logger: Logger) : UnicastRemoteObject
 
     override fun removeApplication(pid: Long) {
         if (!applications.containsKey(pid)) {
-            logger.warning("Could not find application with PID $pid")
+            logger.warning { "Could not find application with PID $pid" }
             throw ApplicationNotFoundException(pid)
         }
 
         val app = applications[pid]!!
         app.handle.destroy()
         applications.remove(pid)
-        logger.info("Removed application with PID $pid (${app.commandString})")
+        logger.info { "Removed application with PID $pid (${app.commandString})" }
     }
 
     data class ApplicationEntry(val handle: Process, val commandString: String)

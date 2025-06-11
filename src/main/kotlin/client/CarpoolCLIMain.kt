@@ -98,7 +98,7 @@ fun main(args: Array<String>) {
 }
 
 private fun connectToSupervisor(args: ArgumentContainer, started: Boolean) {
-    LOGGER.fine("Connecting to supervisor (reconnection?: $started)")
+    LOGGER.fine { "Connecting to supervisor (reconnection?: $started)" }
 
     val port = args.getRequired<Int>("port")
     val trySupervisor: Result<Supervisor> = runCatching {
@@ -114,7 +114,10 @@ private fun connectToSupervisor(args: ArgumentContainer, started: Boolean) {
 
         trySupervisor.onSuccess {
             val supervisorPid = it.status()
-            LOGGER.severe("You have asked to start the supervisor daemon, but it appears to already be running (PID $supervisorPid).")
+            LOGGER.severe{
+                "You have asked to start the supervisor daemon," +
+                        " but it appears to already be running (PID $supervisorPid)."
+            }
             exitProcess(1)
         }
 
@@ -129,7 +132,9 @@ private fun connectToSupervisor(args: ArgumentContainer, started: Boolean) {
     trySupervisor.onSuccess { supervisor ->
         handleCommands(args, supervisor)
     }.onFailure { e ->
-        LOGGER.log(Level.SEVERE, e) { "The supervisor daemon does not appear to be running. Please start it with -start." }
+        LOGGER.log(Level.SEVERE, e) {
+            "The supervisor daemon does not appear to be running. Please start it with -start."
+        }
         exitProcess(1)
     }
 }
@@ -151,26 +156,25 @@ private fun handleCommands(args: ArgumentContainer, supervisor: Supervisor) {
             }
             "list_applications" -> if (args.getRequired<Boolean>("list_applications")) {
                 val applications = supervisor.listApplications()
-                LOGGER.info("Currently ${applications.size} application(s)")
+                LOGGER.info { "Currently ${applications.size} application(s)" }
                 for (app in applications)
-                    LOGGER.info("${app.commandString}\n    -PID: ${app.pid}\n    -Alive?: ${app.isRunning}")
+                    LOGGER.info { "${app.commandString}\n    -PID: ${app.pid}\n    -Alive?: ${app.isRunning}" }
             }
             "add_application" -> for (app in args.getsRequired<String>("add_application")) {
                 if (app.isEmpty()) continue
 
                 val commandString = app.split(" ").toTypedArray()
                 val appPid = supervisor.addApplication(commandString)
-                LOGGER.info("Started application [$app] -- PID $appPid")
+                LOGGER.info { "Started application [$app] -- PID $appPid" }
             }
             "remove_application" -> for (appPid in args.getsRequired<Long>("remove_application")) {
                 if (appPid == -1L) continue
 
                 try {
                     supervisor.removeApplication(appPid)
-                    LOGGER.info("Removed application with PID $appPid")
+                    LOGGER.info { "Removed application with PID $appPid" }
                 } catch (anfe: ApplicationNotFoundException) {
-                    LOGGER.warning("There is no application with PID $appPid")
-                    LOGGER.log(Level.FINE, anfe) { "Exception info:" }
+                    LOGGER.log(Level.WARNING, anfe) { "There is no application with PID $appPid" }
                 }
             }
         }
@@ -190,5 +194,5 @@ private fun spawnSupervisor(logLevel: Level, port: Int, logDir: Path) {
             logDir.absolutePathString()
         ))
 
-    LOGGER.info("Supervisor daemon started - PID ${supervisor.pid()}.")
+    LOGGER.info { "Supervisor daemon started - PID ${supervisor.pid()}." }
 }
