@@ -1,20 +1,20 @@
 package org.bread_experts_group.application_carpool.client
 
 import org.bread_experts_group.application_carpool.rmi.Supervisor
-import org.bread_experts_group.Flag
-import org.bread_experts_group.MultipleArgs
-import org.bread_experts_group.SingleArgs
-import org.bread_experts_group.readArgs
-import org.bread_experts_group.logging.ColoredLogger
-import org.bread_experts_group.stringToBoolean
-import org.bread_experts_group.stringToInt
-import org.bread_experts_group.stringToLong
+import org.bread_experts_group.command_line.ArgumentContainer
+import org.bread_experts_group.command_line.Flag
+import org.bread_experts_group.command_line.readArgs
+import org.bread_experts_group.logging.ColoredHandler
+import org.bread_experts_group.command_line.stringToBoolean
+import org.bread_experts_group.command_line.stringToInt
+import org.bread_experts_group.command_line.stringToLong
 import rmi.ApplicationNotFoundException
 import java.lang.management.ManagementFactory
 import java.nio.file.Path
 import java.rmi.UnmarshalException
 import java.rmi.registry.LocateRegistry
 import java.util.logging.Level
+import java.util.logging.Logger
 import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.createDirectories
@@ -31,7 +31,7 @@ val FLAGS = listOf(
         "port",
         "The port to use for the RMI registry.",
         default = 1099,
-        conv = ::stringToInt
+        conv = stringToInt()
     ),
     Flag(
         "log_directory",
@@ -74,66 +74,68 @@ val FLAGS = listOf(
         "Command to remove a managed application.",
         default = -1,
         repeatable = true,
-        conv = ::stringToLong
+        conv = stringToLong()
     )
 )
-private val LOGGER = ColoredLogger.newLogger("Application Carpool CLI")
-val SINGLE_COMMANDS = listOf("list_applications", "status", "stop")
+private val LOGGER = Logger.getLogger("Application Carpool CLI")
 
 fun main(args: Array<String>) {
-    val (singleArgs, multipleArgs) = readArgs(
+    LOGGER.useParentHandlers = false
+    LOGGER.addHandler(ColoredHandler())
+
+    val args = readArgs(
         args,
         FLAGS,
         "Application Carpool",
         "A program for running your applications in the background."
     )
-    LOGGER.level = singleArgs["log_level"] as Level
+    LOGGER.level = args.getRequired<Level>("log_level")
     LOGGER.fine("Reading arguments")
 
-    (singleArgs["log_directory"] as Path).createDirectories()
+    args.getRequired<Path>("log_directory").createDirectories()
 
-    connectToSupervisor(singleArgs, multipleArgs, false)
+    connectToSupervisor(args, false)
 }
 
-private fun connectToSupervisor(singleArgs: SingleArgs, multipleArgs: MultipleArgs, started: Boolean) {
+private fun connectToSupervisor(args: ArgumentContainer, started: Boolean) {
     LOGGER.fine("Connecting to supervisor (reconnection?: $started)")
 
-    val port = singleArgs["port"] as Int
+    val port = args.getRequired<Int>("port")
     val trySupervisor: Result<Supervisor> = runCatching {
         val registry = LocateRegistry.getRegistry(port)
         registry.lookup("CarpoolSupervisor") as Supervisor
     }
 
-    if (singleArgs["start"] as Boolean && !started) {
-        if (singleArgs["stop"] as Boolean) {
+    if (args.getRequired<Boolean>("start") && !started) {
+        if (args.getRequired<Boolean>("stop")) {
             LOGGER.severe("Please only use EITHER -start or -stop.")
             exitProcess(1)
         }
 
         trySupervisor.onSuccess {
-            val supervisorPid = it.status().pid
+            val supervisorPid = it.status()
             LOGGER.severe("You have asked to start the supervisor daemon, but it appears to already be running (PID $supervisorPid).")
             exitProcess(1)
         }
 
-        spawnSupervisor(LOGGER.level, port, singleArgs["log_directory"] as Path)
+        spawnSupervisor(LOGGER.level, port, args.getRequired<Path>("log_directory"))
         LOGGER.info("Giving the supervisor time to wake up...")
         Thread.sleep(500)
         LOGGER.fine("Attempting to connect to newly-started supervisor")
-        connectToSupervisor(singleArgs, multipleArgs, true)
+        connectToSupervisor(args, true)
         return
     }
 
     trySupervisor.onSuccess { supervisor ->
-        handleCommands(singleArgs.filterKeys { SINGLE_COMMANDS.contains(it) }, multipleArgs, supervisor)
+        handleCommands(args, supervisor)
     }.onFailure { e ->
         LOGGER.log(Level.SEVERE, e) { "The supervisor daemon does not appear to be running. Please start it with -start." }
         exitProcess(1)
     }
 }
 
-private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, supervisor: Supervisor) {
-    if (singleArgs["stop"] as Boolean)
+private fun handleCommands(args: ArgumentContainer, supervisor: Supervisor) {
+    if (args.getRequired<Boolean>("stop"))
         try {
             supervisor.stop()
         } catch (_: UnmarshalException) {  // expected, so ignore
@@ -142,49 +144,32 @@ private fun handleCommands(singleArgs: SingleArgs, multipleArgs: MultipleArgs, s
             exitProcess(0)
         }
 
-    for (arg in singleArgs)
-        when (arg.key) {
-            "status" -> if (singleArgs["status"] as Boolean) {
-                val status = try {
-                    supervisor.status()
-                } catch (e: Exception) {
-                    LOGGER.info("There was an exception getting the supervisor's status -- is it online?")
-                    LOGGER.log(Level.FINE, e) { "The produced exception was" }
-                    continue
-                }
-
-                if (status.status)
-                    LOGGER.info("Supervisor online, PID ${status.pid}")
-                else
-                    LOGGER.info("Supervisor OFFLINE -- please check your configuration")
+    for (arg in args.of.keys)
+        when (arg) {
+            "status" -> if (args.getRequired<Boolean>("status")) {
+                LOGGER.info { "Supervisor online, PID: ${supervisor.status()}" }
             }
-            "list_applications" -> if (singleArgs["list_applications"] as Boolean) {
+            "list_applications" -> if (args.getRequired<Boolean>("list_applications")) {
                 val applications = supervisor.listApplications()
                 LOGGER.info("Currently ${applications.size} application(s)")
                 for (app in applications)
                     LOGGER.info("${app.commandString}\n    -PID: ${app.pid}\n    -Alive?: ${app.isRunning}")
             }
-        }
+            "add_application" -> for (app in args.getsRequired<String>("add_application")) {
+                if (app.isEmpty()) continue
 
-    for (arg in multipleArgs)
-        when (arg.key) {
-            "add_application" -> for (app in arg.value) {
-                val asString = app as String
-                if (asString.isEmpty()) continue
-
-                val commandString = asString.split(" ").toTypedArray()
+                val commandString = app.split(" ").toTypedArray()
                 val appPid = supervisor.addApplication(commandString)
-                LOGGER.info("Started application [$asString] -- PID $appPid")
+                LOGGER.info("Started application [$app] -- PID $appPid")
             }
-            "remove_application" -> for (app in arg.value) {
-                val asLong = app as Long
-                if (asLong == -1L) continue
+            "remove_application" -> for (appPid in args.getsRequired<Long>("remove_application")) {
+                if (appPid == -1L) continue
 
                 try {
-                    supervisor.removeApplication(asLong)
-                    LOGGER.info("Removed application with PID $asLong")
+                    supervisor.removeApplication(appPid)
+                    LOGGER.info("Removed application with PID $appPid")
                 } catch (anfe: ApplicationNotFoundException) {
-                    LOGGER.warning("There is no application with PID $asLong")
+                    LOGGER.warning("There is no application with PID $appPid")
                     LOGGER.log(Level.FINE, anfe) { "Exception info:" }
                 }
             }

@@ -12,7 +12,7 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
-    implementation("org.bread_experts_group:bread_server_lib-code:2.22.2")
+    implementation("org.bread_experts_group:bread_server_lib-code:2.32.1")
 }
 
 tasks.test {

@@ -1,18 +1,18 @@
 package org.bread_experts_group.application_carpool.supervisor
 
-import org.bread_experts_group.logging.ColoredLogger
 import java.io.PrintStream
 import java.lang.Integer.parseInt
 import java.nio.file.StandardOpenOption
 import java.rmi.registry.LocateRegistry
 import java.util.logging.Level
+import java.util.logging.Logger
 import kotlin.io.path.Path
 import kotlin.io.path.createFile
 import kotlin.io.path.notExists
 import kotlin.io.path.outputStream
 import kotlin.system.exitProcess
 
-private val LOGGER = ColoredLogger.newLogger("Application Carpool Supervisor")
+private val LOGGER = Logger.getLogger("Application Carpool Supervisor")
 
 fun main(args: Array<String>) {
     val pid = ProcessHandle.current().pid()

@@ -7,7 +7,7 @@ import java.rmi.RemoteException
 
 interface Supervisor : Remote {
     @Throws(RemoteException::class)
-    fun status(): StatusResult
+    fun status(): Long
 
     @Throws(RemoteException::class)
     fun stop()
