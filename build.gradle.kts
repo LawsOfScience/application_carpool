@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "2.1.20"
+    application
 }
 
 group = "org.bread_experts_group"
@@ -20,11 +21,15 @@ tasks.test {
 }
 tasks.jar.configure {
     manifest {
-        attributes(mapOf("Main-Class" to "org.bread_experts_group.application_carpool.client.CarpoolCLIMainKt"))
+        attributes(mapOf("Main-Class" to application.mainClass))
     }
     configurations["compileClasspath"].forEach { file: File ->
         from(zipTree(file.absoluteFile))
     }
+}
+
+application {
+    mainClass = "org.bread_experts_group.application_carpool.client.CarpoolCLIMainKt"
 }
 
 kotlin {
