@@ -8,6 +8,7 @@ import java.rmi.registry.LocateRegistry
 import java.util.logging.FileHandler
 import java.util.logging.Level
 import java.util.logging.Logger
+import java.util.logging.SimpleFormatter
 import kotlin.io.path.Path
 import kotlin.system.exitProcess
 
@@ -43,10 +44,13 @@ fun main(args: Array<String>) {
     val pid = ProcessHandle.current().pid()
     val port = args.getRequired<Int>("port")
 
+    val logFileHandler = FileHandler(
+        args.getRequired<Path>("log_dir").resolve("supervisor-log.txt").toString(),
+    )
+    logFileHandler.formatter = SimpleFormatter()
+
     LOGGER.useParentHandlers = false
-    LOGGER.addHandler(FileHandler(
-        args.getRequired<Path>("log_dir").resolve("supervisor-log.txt").toString()
-    ))
+    LOGGER.addHandler(logFileHandler)
     LOGGER.level = args.getRequired<Level>("log_level")
     LOGGER.info { "Starting supervisor daemon -- PID $pid" }
 
