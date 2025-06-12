@@ -1,6 +1,7 @@
 package org.bread_experts_group.application_carpool.client
 
 import org.bread_experts_group.application_carpool.rmi.Supervisor
+import org.bread_experts_group.application_carpool.supervisor.CarpoolSupervisor
 import org.bread_experts_group.command_line.ArgumentContainer
 import org.bread_experts_group.command_line.Flag
 import org.bread_experts_group.command_line.readArgs
@@ -188,7 +189,7 @@ private fun spawnSupervisor(logLevel: Level, port: Int, logDir: Path) {
         .exec(arrayOf(
             "java",
             "-cp", classPath,
-            "org.bread_experts_group.application_carpool.supervisor.CarpoolSupervisorMainKt",
+            CarpoolSupervisor::class.qualifiedName!!,
             "-log_level=$logLevel",
             "-port=$port",
             "-log_dir=${logDir.absolutePathString()}"
