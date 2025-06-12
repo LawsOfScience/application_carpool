@@ -159,7 +159,12 @@ private fun handleCommands(args: ArgumentContainer, supervisor: Supervisor) {
                 val applications = supervisor.listApplications()
                 LOGGER.info { "Currently ${applications.size} application(s)" }
                 for (app in applications)
-                    LOGGER.info { "${app.commandString}\n    -PID: ${app.pid}\n    -Alive?: ${app.isRunning}" }
+                    LOGGER.info {
+                        "${app.commandString}\n" +
+                                "    -PID: ${app.pid}\n" +
+                                "    -Alive?: ${app.isRunning}" +
+                                "    -Logs: ${app.logFile}"
+                    }
             }
             "add_application" -> for (app in args.getsRequired<String>("add_application")) {
                 if (app.isEmpty()) continue

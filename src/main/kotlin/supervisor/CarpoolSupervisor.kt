@@ -14,6 +14,7 @@ import java.util.logging.Level
 import java.util.logging.Logger
 import java.util.logging.SimpleFormatter
 import kotlin.io.path.Path
+import kotlin.io.path.outputStream
 import kotlin.system.exitProcess
 
 private val FLAGS = listOf(
@@ -38,7 +39,7 @@ private val FLAGS = listOf(
 )
 private val LOGGER = Logger.getLogger("Application Carpool Supervisor")
 
-class CarpoolSupervisor(val pid: Long) : UnicastRemoteObject(0), Supervisor {
+class CarpoolSupervisor(val pid: Long, val logDir: Path) : UnicastRemoteObject(0), Supervisor {
     val applications = mutableMapOf<Long, ApplicationEntry>()
 
     override fun status() = pid
@@ -52,7 +53,12 @@ class CarpoolSupervisor(val pid: Long) : UnicastRemoteObject(0), Supervisor {
 
     override fun listApplications(): List<ApplicationInfo> {
         return applications.values.map {
-            ApplicationInfo(it.handle.pid(), it.commandString, it.handle.isAlive)
+            ApplicationInfo(
+                it.handle.pid(),
+                it.commandString,
+                it.handle.isAlive,
+                it.logFile.toString()
+            )
         }
     }
 
@@ -61,7 +67,14 @@ class CarpoolSupervisor(val pid: Long) : UnicastRemoteObject(0), Supervisor {
         LOGGER.info { "Starting application $commandString" }
 
         val app = Runtime.getRuntime().exec(commandArray)
-        applications[app.pid()] = ApplicationEntry(app, commandString)
+
+        LOGGER.fine("Creating log file")
+        val appLogFile = logDir.resolve("${app.pid()}_log.txt")
+        val transferThread = Thread.ofVirtual().start {
+            app.inputStream.transferTo(appLogFile.outputStream())
+        }
+
+        applications[app.pid()] = ApplicationEntry(app, commandString, appLogFile, transferThread)
         return app.pid()
     }
 
@@ -100,7 +113,7 @@ class CarpoolSupervisor(val pid: Long) : UnicastRemoteObject(0), Supervisor {
             LOGGER.info { "Starting supervisor daemon -- PID $pid" }
 
             var registry = LocateRegistry.getRegistry(port)
-            val supervisorStub = CarpoolSupervisor(pid)
+            val supervisorStub = CarpoolSupervisor(pid, args.getRequired<Path>("log_dir"))
 
             try {
                 registry.bind("CarpoolSupervisor", supervisorStub)
@@ -126,5 +139,10 @@ class CarpoolSupervisor(val pid: Long) : UnicastRemoteObject(0), Supervisor {
         }
     }
 
-    data class ApplicationEntry(val handle: Process, val commandString: String)
+    data class ApplicationEntry(
+        val handle: Process,
+        val commandString: String,
+        val logFile: Path,
+        val logFileTransferHandle: Thread
+    )
 }
