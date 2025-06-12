@@ -6,23 +6,23 @@ For building and running, Java 21+ is required. Other than that, you don't need 
 
 ** Usage
 This describes the general usage of Carpool.
-For brevity, =jar= will be used instead of =java -jar <jarfile>=
+For clarity, =carpool= will refer to the executable in the following examples
 
 *** Supervisor Daemon Management
 _Starting and stopping_
 #+BEGIN_SRC sh :exports code
-jar -start
-jar -stop
+carpool -start
+carpool -stop
 
 # NOTE: if the -log_level flag is used
 # with -start, the log level will be
 # set for the supervisor daemon as well
-jar -log_level=FINE -start
+carpool -log_level=FINE -start
 #+END_SRC
 
 _Status_
 #+BEGIN_SRC sh :exports code
-jar -status
+carpool -status
 #+END_SRC
 
 *** Service Management
@@ -30,14 +30,21 @@ jar -status
 
 _Adding and removing_
 #+BEGIN_SRC sh :exports code
-jar -add_service="./some-executable --args"
-jar -remove_service=<pid>
+carpool -add_service="./some-executable --args"
+carpool -remove_service=<pid>
 #+END_SRC
 
 _Listing_
 #+BEGIN_SRC sh :exports code
-jar -list_services
+carpool -list_services
 #+END_SRC
+
+*** Configuration
+Configuration is done via flags in the CLI's arguments.
+- =-port= (default =1099=) -- specifies the port of the RMI registry
+- =-log_directory= (default =./logs/=) -- specifies the directory to place logs in
+- =-log_level= (default =Level.INFO=) -- specifies the logging level
+  - Will apply to the supervisor as well if used with =-start=
 
 ** Building and contributing
 IntelliJ IDEA is recommended, but use what works for you.
