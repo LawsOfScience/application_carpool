@@ -46,7 +46,10 @@ class CarpoolSupervisor(val pid: Long, val logDir: Path) : UnicastRemoteObject(0
 
     override fun stop() {
         LOGGER.info("Stop request received, shutting down applications")
-        for (app in applications.values) app.handle.destroy()
+        for (app in applications.values)  {
+            app.handle.destroy()
+            app.logFileTransferHandle.interrupt()
+        }
         LOGGER.info("Applications shut down, exiting supervisor daemon")
         exitProcess(0)
     }
@@ -75,6 +78,7 @@ class CarpoolSupervisor(val pid: Long, val logDir: Path) : UnicastRemoteObject(0
         }
 
         applications[app.pid()] = ApplicationEntry(app, commandString, appLogFile, transferThread)
+        LOGGER.info { "Started app [${commandString}] -- PID ${app.pid()}" }
         return app.pid()
     }
 
