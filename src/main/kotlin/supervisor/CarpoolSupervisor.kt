@@ -1,11 +1,11 @@
-package org.bread_experts_group.application_carpool.supervisor
+package xyz.aerasto.application_carpool.supervisor
 
-import org.bread_experts_group.application_carpool.rmi.Supervisor
 import org.bread_experts_group.command_line.Flag
 import org.bread_experts_group.command_line.readArgs
 import org.bread_experts_group.command_line.stringToInt
-import rmi.ApplicationInfo
-import rmi.ApplicationNotFoundException
+import xyz.aerasto.application_carpool.rmi.ApplicationInfo
+import xyz.aerasto.application_carpool.rmi.ApplicationNotFoundException
+import xyz.aerasto.application_carpool.rmi.Supervisor
 import java.nio.file.Path
 import java.rmi.registry.LocateRegistry
 import java.rmi.server.UnicastRemoteObject

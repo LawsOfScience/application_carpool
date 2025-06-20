@@ -1,4 +1,4 @@
-package rmi
+package xyz.aerasto.application_carpool.rmi
 
 import java.io.Serializable
 

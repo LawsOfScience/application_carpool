@@ -3,7 +3,7 @@ plugins {
     application
 }
 
-group = "org.bread_experts_group"
+group = "xyz.aerasto"
 version = "1.1.0"
 
 repositories {
@@ -29,7 +29,7 @@ tasks.jar.configure {
 }
 
 application {
-    mainClass = "org.bread_experts_group.application_carpool.client.CarpoolCLIMainKt"
+    mainClass = "xyz.aerasto.application_carpool.client.CarpoolCLIMainKt"
 }
 
 kotlin {

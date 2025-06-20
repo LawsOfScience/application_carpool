@@ -1,7 +1,5 @@
-package org.bread_experts_group.application_carpool.rmi
+package xyz.aerasto.application_carpool.rmi
 
-import rmi.ApplicationInfo
-import rmi.ApplicationNotFoundException
 import java.rmi.Remote
 import java.rmi.RemoteException
 

@@ -1,7 +1,5 @@
-package org.bread_experts_group.application_carpool.client
+package xyz.aerasto.application_carpool.client
 
-import org.bread_experts_group.application_carpool.rmi.Supervisor
-import org.bread_experts_group.application_carpool.supervisor.CarpoolSupervisor
 import org.bread_experts_group.command_line.ArgumentContainer
 import org.bread_experts_group.command_line.Flag
 import org.bread_experts_group.command_line.readArgs
@@ -9,7 +7,9 @@ import org.bread_experts_group.logging.ColoredHandler
 import org.bread_experts_group.command_line.stringToBoolean
 import org.bread_experts_group.command_line.stringToInt
 import org.bread_experts_group.command_line.stringToLong
-import rmi.ApplicationNotFoundException
+import xyz.aerasto.application_carpool.rmi.ApplicationNotFoundException
+import xyz.aerasto.application_carpool.rmi.Supervisor
+import xyz.aerasto.application_carpool.supervisor.CarpoolSupervisor
 import java.lang.management.ManagementFactory
 import java.nio.file.Path
 import java.rmi.UnmarshalException
